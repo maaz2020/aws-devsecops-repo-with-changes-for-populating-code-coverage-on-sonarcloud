@@ -2,10 +2,24 @@ version: 0.2
 env:
     secrets-manager:
       TOKEN: firstSecret:tokenforsonar
+      SNYK_TOKEN: snykSecret:tokenforsnyk
 phases:
   install:
     runtime-versions:
       java: latest
   build:
     commands:
-      - mvn verify sonar:sonar -Dsonar.projectKey=awsdevsecjavaproject -Dsonar.organization=awsdevsecjavaproject -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=$TOKEN 
+      - mvn verify sonar:sonar -Dsonar.projectKey=awsdevsecjavaproject -Dsonar.organization=awsdevsecjavaproject -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=$TOKEN
+      
+      # install the latest Snyk CLI from GitHub Releases
+      - apt-get update
+      - apt-get -y install maven
+      - latest_version=$(curl -Is "https://github.com/snyk/cli/releases/latest" | grep "^location" | sed 's#.*tag/##g' | tr -d "\r")
+      - snyk_cli_dl_linux="https://github.com/snyk/cli/releases/download/${latest_version}/snyk-linux"
+      - curl -Lo /usr/local/bin/snyk $snyk_cli_dl_linux
+      - chmod +x /usr/local/bin/snyk
+      
+       # authenticate the Snyk CLI
+      - snyk auth $SNYK_TOKEN
+      - export SNYK_TOKEN
+      - mvn snyk:test -fn 
